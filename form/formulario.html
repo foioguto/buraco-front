@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,18 +9,18 @@
 <body>
     <nav class="navbar">
         <div class="navbar-brand">
-            <img src="../../assets/logoPrefeitura.svg" alt="Logo da Prefeitura" class="imagemLogodaPrefeitura">
+            <img src="../assets/logoPrefeitura.svg" alt="Logo da Prefeitura" class="imagemLogodaPrefeitura">
             <span class="NomedaAplicação">| Denúncia de Buracos</span>
         </div>
         <div class="navbar-links">
-            <a href="../index.html"><span class="textoDaBarra">Inicio</span></a>
+            <a href="../index.html"><span class="textoDaBarra">Início</span></a>
             <a href="../serv/serv.html"><span class="textoDaBarra">Serviços</span></a>
             <a href="../sobre/sobre.html"><span class="textoDaBarra">Saiba Mais</span></a>
         </div>
     </nav>
 
     <div class="container">
-        <form class="form-container" action="/Projeot-SQLdeBuracos-0.0.1-SNAPSHOT/upload" method="POST" enctype="multipart/form-data">
+        <form class="form-container" id="denunciaForm" onsubmit="handleSubmit(event)">
             <h2>Formulário de Denúncia</h2>
             
             <div class="form-group">
@@ -29,7 +29,7 @@
             </div>
 
             <div class="form-group">
-                <label for="size">Tamanho do seu buraco:</label>
+                <label for="size">Tamanho do buraco:</label>
                 <select id="size" name="size" required>
                     <option value="">Selecione o tamanho</option>
                     <option value="small">Pequeno (até 30cm)</option>
@@ -39,7 +39,7 @@
             </div>
 
             <div class="form-group">
-                <label for="risk">Nível de risco:</label>
+                <label>Nível de risco:</label>
                 <div class="radio-group">
                     <input type="radio" id="low" name="risk" value="low" required>
                     <label for="low">Baixo</label>
@@ -54,42 +54,73 @@
 
             <div class="form-group">
                 <label for="description">Descrição adicional:</label>
-                <textarea id="description" name="description" rows="4" placeholder="Descreva detalhes adicionais sobre o seu buraco"></textarea>
+                <textarea id="description" name="description" rows="4" placeholder="Descreva detalhes adicionais sobre o buraco"></textarea>
             </div>
 
             <div class="form-group">
                 <label for="photo">Foto do buraco:</label>
                 <input type="file" id="photo" name="photo" accept="image/*" required>
-                <div id="metadataStatus"></div>
+                <div id="metadataStatus" class="metadata-status"></div>
             </div>
 
-            <button type="submit" class="submit-btn">Enviar Buraco</button>
+            <button type="submit" class="submit-btn">Enviar Denúncia</button>
         </form>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script>
+        function handleSubmit(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            
+            submitButton.disabled = true;
+            submitButton.textContent = 'Enviando...';
+
+            fetch('/api/denuncias', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao enviar denúncia');
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert('Denúncia enviada com sucesso!');
+                event.target.reset();
+            })
+            .catch(error => {
+                alert('Erro ao enviar denúncia. Por favor, tente novamente.');
+                console.error('Erro:', error);
+            })
+            .finally(() => {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Enviar Denúncia';
+            });
+        }
+
         document.getElementById('photo').addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                const arrayBuffer = e.target.result;
-                const dataView = new DataView(arrayBuffer);
-
                 EXIF.getData(file, function() {
                     const allMetaData = EXIF.getAllTags(this);
                     const hasMetaData = Object.keys(allMetaData).length > 0;
-
-                    document.getElementById('metadataStatus').textContent = 
-                        hasMetaData ? 'A imagem tem metadados.' : 'A imagem nao tem metadados.';
+                    
+                    const statusElement = document.getElementById('metadataStatus');
+                    statusElement.textContent = hasMetaData ? 
+                        'Imagem com metadados válidos' : 
+                        'Imagem sem metadados de localização';
+                    statusElement.className = `metadata-status ${hasMetaData ? 'valid' : 'invalid'}`;
                 });
             };
             reader.readAsArrayBuffer(file);
         });
-
-    </script>
-
+    </script>
 </body>
 </html>
